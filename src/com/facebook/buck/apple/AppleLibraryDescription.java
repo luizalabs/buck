@@ -746,6 +746,14 @@ public class AppleLibraryDescription
       CellPathResolver cellRoots,
       AppleNativeTargetDescriptionArg args,
       Class<U> metadataClass) {
+    if (metadataClass.isAssignableFrom(AppleBundleIncludableDependenies.class)) {
+      ImmutableSet<SourcePath> appleNativeTargetBundleIncludableDependencies =
+          AppleDescriptions.getAppleNativeTargetBundleIncludableDependencies(
+              buildTarget, graphBuilder, getCxxPlatformsProvider(), args.getDeps());
+      return Optional.of(
+          metadataClass.cast(
+              AppleBundleIncludableDependenies.of(appleNativeTargetBundleIncludableDependencies)));
+     }
 
     if (CxxLibraryDescription.METADATA_TYPE.containsAnyOf(buildTarget.getFlavors())) {
       // Modules are always platform specific so we need to only have one platform specific
