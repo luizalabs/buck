@@ -678,24 +678,13 @@ public class AppleDescriptions {
         }
       }
     }
-    // TODO(17155714): framework embedding is currently oddly entwined with framework generation.
-    // This change simply treats all the immediate prebuilt framework dependencies as wishing to be
-    // embedded, but in the future this should be dealt with with some greater sophistication.
-    for (BuildTarget dep : deps) {
-      Optional<TargetNode<PrebuiltAppleFrameworkDescriptionArg>> prebuiltNode =
-          targetGraph
-              .getOptional(dep)
-              .flatMap(
-                  node -> TargetNodes.castArg(node, PrebuiltAppleFrameworkDescriptionArg.class));
-      if (prebuiltNode.isPresent()
-          && !prebuiltNode
-              .get()
-              .getConstructorArg()
-              .getPreferredLinkage()
-              .equals(NativeLinkableGroup.Linkage.STATIC)) {
-        frameworksBuilder.add(graphBuilder.requireRule(dep).getSourcePathToOutput());
-      }
-    }
+    frameworksBuilder.addAll(
+        getAppleNativeTargetBundleIncludableDependencies(
+            buildTarget,
+            graphBuilder,
+            cxxPlatformsProvider,
+            ImmutableSortedSet.<BuildTarget>naturalOrder().addAll(deps).add(binaryTarget).build()));
+
     ImmutableSet<SourcePath> frameworks = frameworksBuilder.build();
 
     BuildTarget buildTargetWithoutBundleSpecificFlavors = stripBundleSpecificFlavors(buildTarget);
@@ -862,6 +851,30 @@ public class AppleDescriptions {
         codesignTimeout,
         copySwiftStdlibToFrameworks,
         useEntitlementsWhenAdhocCodeSigning);
+  }
+
+  static ImmutableSet<SourcePath> getAppleNativeTargetBundleIncludableDependencies(
+      BuildTarget buildTarget,
+      ActionGraphBuilder graphBuilder,
+      CxxPlatformsProvider platformsProvider,
+      ImmutableSortedSet<BuildTarget> deps) {
+    Set<Flavor> platformFlavors =
+        platformsProvider.getCxxPlatforms().containsAnyOf(buildTarget.getFlavors())
+            ? Sets.intersection(
+                platformsProvider.getCxxPlatforms().getFlavors(), buildTarget.getFlavors())
+            : ImmutableSet.of(platformsProvider.getDefaultCxxPlatform().getFlavor());
+    Preconditions.checkState(
+        platformFlavors.size() > 0,
+        "Need to a cxx platform flavor to collect framework dependencies for %s",
+        buildTarget);
+    ImmutableSet.Builder<SourcePath> frameworksBuilder = ImmutableSet.builder();
+    for (BuildTarget dep : deps) {
+      graphBuilder
+          .requireMetadata(dep.withFlavors(platformFlavors), AppleBundleIncludableDependenies.class)
+          .map(AbstractAppleBundleIncludableDependenies::getFrameworkPaths)
+          .map(frameworksBuilder::addAll);
+    }
+    return frameworksBuilder.build();
   }
 
   /**
