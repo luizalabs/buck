@@ -26,14 +26,14 @@ import com.facebook.buck.core.model.Flavor;
 import com.facebook.buck.core.model.FlavorDomain;
 import com.facebook.buck.core.model.Flavored;
 import com.facebook.buck.core.model.InternalFlavor;
-import com.facebook.buck.core.model.targetgraph.BuildRuleCreationContextWithTargetGraph;
-import com.facebook.buck.core.model.targetgraph.DescriptionWithTargetGraph;
 import com.facebook.buck.core.rules.ActionGraphBuilder;
 import com.facebook.buck.core.rules.BuildRule;
 import com.facebook.buck.core.rules.BuildRuleCreationContextWithTargetGraph;
 import com.facebook.buck.core.rules.BuildRuleParams;
 import com.facebook.buck.core.rules.DescriptionWithTargetGraph;
+import com.facebook.buck.core.rules.impl.DefaultSourcePathRuleFinder;
 import com.facebook.buck.core.sourcepath.SourcePath;
+import com.facebook.buck.core.sourcepath.resolver.impl.DefaultSourcePathResolver;
 import com.facebook.buck.core.toolchain.ToolchainProvider;
 import com.facebook.buck.core.util.immutables.BuckStyleImmutable;
 import com.facebook.buck.cxx.CxxFlags;
@@ -64,12 +64,12 @@ public class PrebuiltAppleFrameworkDescription
       InternalFlavor.of("framework-binary");
 
   private final ToolchainProvider toolchainProvider;
-  private final ImmutableSet<Flavor> declaredPlatforms;
+  private final CxxBuckConfig cxxBuckConfig;
 
   public PrebuiltAppleFrameworkDescription(
       ToolchainProvider toolchainProvider, CxxBuckConfig cxxBuckConfig) {
     this.toolchainProvider = toolchainProvider;
-    this.declaredPlatforms = cxxBuckConfig.getDeclaredPlatforms();
+    this.cxxBuckConfig = cxxBuckConfig;
   }
 
   private FlavorDomain<AppleCxxPlatform> getAppleCxxPlatformsFlavorDomain() {
@@ -89,7 +89,7 @@ public class PrebuiltAppleFrameworkDescription
     return RichStream.from(flavors)
         .allMatch(
             flavor ->
-                declaredPlatforms.contains(flavor)
+                cxxBuckConfig.getDeclaredPlatforms().contains(flavor)
                     || appleCxxPlatformsFlavorDomain.getFlavors().contains(flavor)
                     || appleCxxPlatformsFlavorDomain.getFlavors().contains(flavor)
                     || AppleDebugFormat.FLAVOR_DOMAIN.getFlavors().contains(flavor)
@@ -119,7 +119,7 @@ public class PrebuiltAppleFrameworkDescription
       BuildRuleParams params,
       PrebuiltAppleFrameworkDescriptionArg args) {
     DefaultSourcePathResolver pathResolver =
-        DefaultSourcePathResolver.from(new SourcePathRuleFinder(context.getActionGraphBuilder()));
+        DefaultSourcePathResolver.from(DefaultSourcePathRuleFinder.from(context.getActionGraphBuilder()));
 
     if (getAppleCxxPlatformsFlavorDomain().containsAnyOf(buildTarget.getFlavors())) {
       BuildRule binaryBuildRule = getBinaryBuildRule(context, buildTarget, params);
@@ -169,7 +169,8 @@ public class PrebuiltAppleFrameworkDescription
               params,
               context.getActionGraphBuilder(),
               multiarchFileInfo.get(),
-              thinRules.build());
+              thinRules.build(),
+              cxxBuckConfig);
       return fatBinaryRule;
     }
     return getThinBinaryRule(buildTarget, params, context);

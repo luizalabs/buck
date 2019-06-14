@@ -3357,7 +3357,7 @@ public class ProjectGenerator {
     } else if (targetNode.getDescription() instanceof PrebuiltAppleFrameworkDescription) {
       PrebuiltAppleFrameworkDescriptionArg frameworkDescriptionArg =
           (PrebuiltAppleFrameworkDescriptionArg) targetNode.getConstructorArg();
-      if (frameworkDescriptionArg.getPreferredLinkage() == NativeLinkable.Linkage.STATIC) {
+      if (frameworkDescriptionArg.getPreferredLinkage() == NativeLinkableGroup.Linkage.STATIC) {
         return Optional.empty();
       }
       return Optional.of(

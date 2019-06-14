@@ -39,6 +39,10 @@ public class DefaultSourcePathRuleFinder implements SourcePathRuleFinder {
     this.sourcePathResolver = DefaultSourcePathResolver.from(this);
   }
 
+  public static DefaultSourcePathRuleFinder from(BuildRuleResolver ruleResolver) {
+    return new DefaultSourcePathRuleFinder(ruleResolver);
+  }
+
   @Override
   public ImmutableSet<BuildRule> filterBuildRuleInputs(Iterable<? extends SourcePath> sources) {
     return RichStream.from(sources)
