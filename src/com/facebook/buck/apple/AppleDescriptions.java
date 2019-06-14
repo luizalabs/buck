@@ -57,7 +57,6 @@ import com.facebook.buck.cxx.HasAppleDebugSymbolDeps;
 import com.facebook.buck.cxx.toolchain.CxxPlatformsProvider;
 import com.facebook.buck.cxx.toolchain.LinkerMapMode;
 import com.facebook.buck.cxx.toolchain.StripStyle;
-import com.facebook.buck.cxx.toolchain.nativelink.NativeLinkableGroup;
 import com.facebook.buck.io.file.MorePaths;
 import com.facebook.buck.io.filesystem.ProjectFilesystem;
 import com.facebook.buck.rules.coercer.PatternMatchedCollection;
@@ -859,10 +858,10 @@ public class AppleDescriptions {
       CxxPlatformsProvider platformsProvider,
       ImmutableSortedSet<BuildTarget> deps) {
     Set<Flavor> platformFlavors =
-        platformsProvider.getCxxPlatforms().containsAnyOf(buildTarget.getFlavors())
+        platformsProvider.getUnresolvedCxxPlatforms().containsAnyOf(buildTarget.getFlavors())
             ? Sets.intersection(
-                platformsProvider.getCxxPlatforms().getFlavors(), buildTarget.getFlavors())
-            : ImmutableSet.of(platformsProvider.getDefaultCxxPlatform().getFlavor());
+                platformsProvider.getUnresolvedCxxPlatforms().getFlavors(), buildTarget.getFlavors())
+            : ImmutableSet.of(platformsProvider.getDefaultUnresolvedCxxPlatform().getFlavor());
     Preconditions.checkState(
         platformFlavors.size() > 0,
         "Need to a cxx platform flavor to collect framework dependencies for %s",
