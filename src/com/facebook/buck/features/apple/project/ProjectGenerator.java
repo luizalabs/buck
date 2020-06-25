@@ -124,6 +124,7 @@ import com.facebook.buck.cxx.config.CxxBuckConfig;
 import com.facebook.buck.cxx.toolchain.CxxPlatform;
 import com.facebook.buck.cxx.toolchain.HasSystemFrameworkAndLibraries;
 import com.facebook.buck.cxx.toolchain.HeaderVisibility;
+import com.facebook.buck.cxx.toolchain.nativelink.NativeLinkable;
 import com.facebook.buck.cxx.toolchain.nativelink.NativeLinkableGroup;
 import com.facebook.buck.cxx.toolchain.nativelink.NativeLinkableGroup.Linkage;
 import com.facebook.buck.event.BuckEventBus;
@@ -927,18 +928,6 @@ public class ProjectGenerator {
               .ifPresent(
                   appleBundleNode -> {
                     if (isFrameworkBundle(appleBundleNode.getConstructorArg())) {
-                      filteredRules.add(node);
-                    }
-                  });
-          TargetNodes.castArg(node, PrebuiltAppleFrameworkDescriptionArg.class)
-              .ifPresent(
-                  prebuiltFramework -> {
-                    // Technically (see Apple Tech Notes 2435), static frameworks are lies. In case
-                    // a static framework is used, they can escape the incorrect project generation
-                    // by marking its preferred linkage static (what does preferred linkage even
-                    // mean for a prebuilt thing? none of this makes sense anyways).
-                    if (prebuiltFramework.getConstructorArg().getPreferredLinkage()
-                        != NativeLinkableGroup.Linkage.STATIC) {
                       filteredRules.add(node);
                     }
                   });
@@ -3434,6 +3423,11 @@ public class ProjectGenerator {
       return Optional.of(
           CopyFilePhaseDestinationSpec.of(PBXCopyFilesBuildPhase.Destination.RESOURCES));
     } else if (targetNode.getDescription() instanceof PrebuiltAppleFrameworkDescription) {
+      PrebuiltAppleFrameworkDescriptionArg frameworkDescriptionArg =
+          (PrebuiltAppleFrameworkDescriptionArg) targetNode.getConstructorArg();
+      if (frameworkDescriptionArg.getPreferredLinkage() == NativeLinkableGroup.Linkage.STATIC) {
+        return Optional.empty();
+      }
       return Optional.of(
           CopyFilePhaseDestinationSpec.of(PBXCopyFilesBuildPhase.Destination.FRAMEWORKS));
     } else if (targetNode.getDescription() instanceof PrebuiltCxxLibraryDescription) {
